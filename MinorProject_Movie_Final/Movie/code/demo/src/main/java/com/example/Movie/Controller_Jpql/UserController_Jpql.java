@@ -2,12 +2,12 @@ package com.example.Movie.Controller_Jpql;
 
 
 import com.example.Movie.Entity.Movie;
+import com.example.Movie.Model.ReviewRequest;
 import com.example.Movie.RepositoryJpql.MovieRepositoryJpql;
 import com.example.Movie.Service.MovieService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -44,6 +44,22 @@ public class UserController_Jpql
     {
         return movieRepositoryJpql.getMoviesByPriceInDescendingOrder();
     }
+
+    @PatchMapping("/addReview")
+    public void addReview(@RequestParam String name,@RequestParam String language,@RequestBody ReviewRequest reviewRequest) throws JsonProcessingException {
+       Movie movieToAddReview = movieRepositoryJpql.getMovieByNameAndLang(name,language);
+
+        movieServiceForUserJpql.addReview(movieToAddReview,reviewRequest);
+    }
+
+    @GetMapping("/user/movie/getMovieRating")
+    public Double getCumulativeMovieRating(@RequestParam String movieName,@RequestParam String language)
+    {
+        Movie movie = movieRepositoryJpql.getMovieByNameAndLang(movieName,language);
+        return movieServiceForUserJpql.getMovieRating(movie.getId());
+    }
+
+
 
 
 

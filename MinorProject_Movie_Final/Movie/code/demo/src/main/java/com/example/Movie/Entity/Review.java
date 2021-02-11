@@ -15,7 +15,7 @@ public class Review
     @GenericGenerator(name = "native", strategy = "native")
     private Integer Id;
 
-    private String rating;
+    private Double rating;
     private String comment;
 
     @ManyToOne(cascade = CascadeType.ALL)
@@ -25,7 +25,7 @@ public class Review
     public Review() {
     }
 
-    public Review(String rating, String comment) {
+    public Review(Double rating, String comment) {
         this.rating = rating;
         this.comment = comment;
     }
@@ -38,11 +38,11 @@ public class Review
         this.movie = movie;
     }
 
-    public String getRating() {
+    public Double getRating() {
         return rating;
     }
 
-    public void setRating(String rating) {
+    public void setRating(Double rating) {
         this.rating = rating;
     }
 
@@ -58,7 +58,7 @@ public class Review
     public String toString() {
         return "Review{" +
                 "Id=" + Id +
-                ", rating='" + rating + '\'' +
+                ", rating=" + rating +
                 ", comment='" + comment + '\'' +
                 ", movie=" + movie +
                 '}';

@@ -27,10 +27,5 @@ public class UserController
         return movieServiceForUser.getAllMovieFromDB();
     }
 
-    @PatchMapping("/user/movie/addReview") //This will just adds the reviews to the existing movie so patch is used
-    public void addReview(@RequestParam String movieName, @RequestBody ReviewRequest reviewRequest)
-    {
-        movieServiceForUser.addReview(movieName,reviewRequest);
-    }
 
 }

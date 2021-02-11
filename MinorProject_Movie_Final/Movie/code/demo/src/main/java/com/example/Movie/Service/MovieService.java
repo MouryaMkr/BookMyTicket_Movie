@@ -1,9 +1,6 @@
 package com.example.Movie.Service;
 
-import com.example.Movie.Entity.Cast;
-import com.example.Movie.Entity.Movie;
-import com.example.Movie.Entity.Review;
-import com.example.Movie.Entity.StreamingDetails;
+import com.example.Movie.Entity.*;
 import com.example.Movie.Model.CastRequest;
 import com.example.Movie.Model.MovieRequest;
 import com.example.Movie.Model.ReviewRequest;
@@ -11,9 +8,15 @@ import com.example.Movie.Repository.CastsRepository;
 import com.example.Movie.Repository.MovieRepository;
 import com.example.Movie.Repository.ReviewRepository;
 import com.example.Movie.Repository.StreamingDetailsRepository;
+
+import com.example.Movie.RepositoryRedis.RatingRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -32,6 +35,12 @@ public class MovieService implements MovieInterFace
 
     @Autowired
     ReviewRepository reviewRepository;
+
+    @Autowired
+    RatingRepository ratingRepository;
+
+    @Autowired
+    KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
     public void Create(MovieRequest movieRequest)
@@ -105,32 +114,66 @@ public class MovieService implements MovieInterFace
         return movies;
     }
 
-    public void addReview(String movieName, ReviewRequest reviewRequest)
+    /*  Adding the reviews to the mysql data base
+
+        added the cumulative rating to the redis
+
+     */
+
+    public void addReview(Movie movie, ReviewRequest reviewRequest) throws JsonProcessingException {
+
+        Review review =  new Review();
+        review.setRating(reviewRequest.getRating());
+        review.setComment(reviewRequest.getComment());
+        review.setMovie(movie);
+        reviewRepository.save(review);  /* Saving the Review to the data base. */
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        /* Adding the Cumulative review to the redis
+        *
+        *  First get all the reviews belongs to that movie and store it in the list.
+        *
+        *  Now iterate through all the reviews and get the ratings from each review and store it in the ratings list
+        *
+        *  Now use that ratings list to get the cumulative(OverAll) rating of the movie This task is doing by the getCumulativeRating() Fun
+        *
+        *  Now store that overall  rating to the redis cache.
+        *
+        *
+        * */
+        List<Review> reviewList = movie.getReviews();
+        List<Double> ratings = new ArrayList<>();
+
+        for(Review review1 : reviewList)
+        {
+            ratings.add(review1.getRating());
+        }
+
+        Rating_Redis rating_redis = new Rating_Redis();
+        rating_redis.setMovieId(movie.getId());
+        rating_redis.setRating(getCumulativeRating(ratings));
+
+        /*Produce The Rating in the Kafka*/
+
+        //ratingRepository.save(rating_redis);  /* This will saves the data directly to the redis cache */
+
+        kafkaTemplate.send("Rating","Key1",objectMapper.writeValueAsString(rating_redis));
+    }
+
+    public Double getMovieRating(Integer movieId)
     {
-        List<Movie> movies = (List<Movie>) movieRepository.findAll();
-        Integer movieId = 0;
-        Review review;
-
-        if(movies != null)
+        Double rating=0.0;
+        try
         {
-            /*Adding the review for movie*/
-
-            for (Movie movie : movies)
-            {
-                if(movieName.equals(movie.getName()))
-                {
-                    review = new Review();
-                    review.setRating(reviewRequest.getRating());
-                    review.setComment(reviewRequest.getComment());
-                    review.setMovie(movie);
-                    reviewRepository.save(review);
-                }
-            }
+            rating = ratingRepository.findById(movieId).get().getRating();
+            rating = Math.round(rating*10)/10.0d; //Setting the precision to 1
         }
-        else
+        catch (Exception e)
         {
-            System.out.println("NULL While trying to add review");
+            e.printStackTrace();
         }
+
+        return rating;
     }
 
     @Override
@@ -147,5 +190,26 @@ public class MovieService implements MovieInterFace
         {
             movieRepository.deleteById(movie.getId());
         }
+    }
+
+    private Double getCumulativeRating(List<Double> ratings)
+    {
+        if(ratings.isEmpty())
+        {
+            return 0.0;
+        }
+        else
+        {
+            double cumulativeRating = 0;
+            double sumOfRatings = 0;
+            for (Double rating : ratings)
+            {
+                sumOfRatings += rating;
+            }
+            cumulativeRating = ( (sumOfRatings)/(ratings.size()) );
+
+            return cumulativeRating;
+        }
+
     }
 }

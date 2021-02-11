@@ -9,12 +9,18 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 @EnableWebSecurity
 public class MovieAuthConfig extends WebSecurityConfigurerAdapter
 {
     @Autowired
     MovieUserDetailsService movieUserDetailsService;
+
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception
@@ -25,6 +31,7 @@ public class MovieAuthConfig extends WebSecurityConfigurerAdapter
     @Override
     protected void configure(HttpSecurity http) throws Exception
     {
+        http.cors().and().csrf().disable(); /*this will allows other mappings like post and patch.*/
         http.authorizeRequests().antMatchers("/admin/**").hasAuthority("ADMIN").and().formLogin();
         http.authorizeRequests().antMatchers("/user/**").hasAuthority("USER").and().formLogin();
         http.authorizeRequests().antMatchers("/").permitAll().and().formLogin();

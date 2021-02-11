@@ -2,17 +2,17 @@ package com.example.Movie.Model;
 
 public class ReviewRequest {
 
-    private String rating;
+    private Double rating;
     private String comment;
 
     public ReviewRequest() {
     }
 
-    public String getRating() {
+    public Double getRating() {
         return rating;
     }
 
-    public void setRating(String rating) {
+    public void setRating(Double rating) {
         this.rating = rating;
     }
 
